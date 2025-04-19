@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,7 +9,8 @@ from .dependencies.database import engine, get_db
 from .controllers import sandwiches
 from .controllers import resources
 from .controllers import recipes
-
+from .controllers import orders
+from .controllers import order_detail as order_details 
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -131,3 +132,54 @@ def update_recipe(recipe_id: int, recipe: schemas.RecipeUpdate, db: Session = De
 @app.delete("/recipes/{recipe_id}", tags=["Recipes"])
 def delete_recipe(recipe_id: int, db: Session = Depends(get_db)):
     return recipes.delete(db, recipe_id)
+
+
+
+# --- Orders Endpoints ---
+@app.post("/orders/", response_model=schemas.Order, tags=["Orders"])
+def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+    return orders.create(db, order)
+
+@app.get("/orders/", response_model=list[schemas.Order], tags=["Orders"])
+def get_all_orders(db: Session = Depends(get_db)):
+    return orders.read_all(db)
+
+@app.get("/orders/{order_id}", response_model=schemas.Order, tags=["Orders"])
+def get_one_order(order_id: int, db: Session = Depends(get_db)):
+    db_order = orders.read_one(db, order_id)
+    if db_order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return db_order
+
+@app.put("/orders/{order_id}", response_model=schemas.Order, tags=["Orders"])
+def update_order(order_id: int, order: schemas.OrderUpdate, db: Session = Depends(get_db)):
+    db_order = orders.update(db, order_id, order)
+    if db_order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return db_order
+
+@app.delete("/orders/{order_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Orders"])
+def delete_order(order_id: int, db: Session = Depends(get_db)):
+    return orders.delete(db, order_id)
+
+
+# --- Order Details Endpoints ---
+@app.post("/order_details/", response_model=schemas.OrderDetail, tags=["Order Details"])
+def create_order_detail(order_detail: schemas.OrderDetailCreate, db: Session = Depends(get_db)):
+    return order_details.create(db, order_detail)
+
+@app.get("/order_details/", response_model=list[schemas.OrderDetail], tags=["Order Details"])
+def read_all_order_details(db: Session = Depends(get_db)):
+    return order_details.read_all(db)
+
+@app.get("/order_details/{order_detail_id}", response_model=schemas.OrderDetail, tags=["Order Details"])
+def read_order_detail(order_detail_id: int, db: Session = Depends(get_db)):
+    return order_details.read_one(db, order_detail_id)
+
+@app.put("/order_details/{order_detail_id}", response_model=schemas.OrderDetail, tags=["Order Details"])
+def update_order_detail(order_detail_id: int, order_detail: schemas.OrderDetailUpdate, db: Session = Depends(get_db)):
+    return order_details.update(db, order_detail_id, order_detail)
+
+@app.delete("/order_details/{order_detail_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Order Details"])
+def delete_order_detail(order_detail_id: int, db: Session = Depends(get_db)):
+    return order_details.delete(db, order_detail_id)
